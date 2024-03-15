@@ -1,13 +1,16 @@
+
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.models import Model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.utils import to_categorical
+import keras
+
+from keras.callbacks import ModelCheckpoint
+from keras.optimizers import Adam
+from keras.applications import ResNet50
+from keras.layers import Dense, GlobalAveragePooling2D
+from keras.models import Model
+from keras.preprocessing.image import load_img, img_to_array
+from keras.utils import to_categorical
 import xml.etree.ElementTree as ET
 
 # Define constants
@@ -50,7 +53,7 @@ def load_annotation_function(annotation_path):
 
 
 # Define data directory for the selected region
-region_train_data_dir = "/content/drive/MyDrive/TriNIT/dataset/Czech/train"
+region_train_data_dir = r"C:\Users\ADMIN\Desktop\NexGenMavericks\Czech\train"
 
 # Combine paths for images and annotations
 image_dir = os.path.join(region_train_data_dir, "images")
