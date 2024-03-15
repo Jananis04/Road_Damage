@@ -1,66 +1,61 @@
-import os
+test.py
+import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-import xml.etree.ElementTree as ET
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.applications.resnet50 import preprocess_input
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 
-# Constants
-LABELS = ["D00", "D10", "D20", "D40"]
+# Load the trained model
+model = load_model(r"C:\Users\ADMIN\Desktop\NexGenMavericks\Czech\train_model.h5")
+
+# Define constants for road damage types
+LABELS = ["Crack", "Pothole", "Rut", "Spall"]
 IMAGE_SIZE = (224, 224)
-TEST_IMAGE_DIR = "/content/drive/MyDrive/TriNIT/dataset/Czech/test/images"
-OUTPUT_FILE = "test_results.txt"
 
+# Function to preprocess the uploaded image
+def preprocess_image(image_path):
+    # Read the image
+    image = cv2.imread(image_path)
+    # Resize image to the input size of the model
+    image = cv2.resize(image, IMAGE_SIZE)
+    # Convert image to array and preprocess for ResNet50 model
+    image = img_to_array(image)
+    image = preprocess_input(image)
+    return image
 
-def load_annotation_function(annotation_path):
-    tree = ET.parse(annotation_path)
-    root = tree.getroot()
-
-    # Check if the image has any road damage
-    has_damage = False
-    if root.find('object') is not None:
-        has_damage = True
-
-    return has_damage
-
-
-def load_and_predict_images(model, image_dir):
-    results = []
-    for img_file in os.listdir(image_dir):
-        if img_file.endswith(".jpg"):
-            img_path = os.path.join(image_dir, img_file)
-            image = load_img(img_path, target_size=IMAGE_SIZE)
-            image = img_to_array(image)
-            image = np.expand_dims(image, axis=0)  # Add batch dimension
-            image = image / 255.0  # Normalize
-
-            # Predict classes
-            prediction = model.predict(image)
-            predicted_class = np.argmax(prediction)
-            if predicted_class < len(LABELS):
-                predicted_label = LABELS[predicted_class]
+# Function to draw bounding boxes around detected damage areas
+def draw_damage_boxes(image, predictions):
+    for i, prediction in enumerate(predictions):
+        # Get the predicted label
+        predicted_label_index = np.argmax(prediction)
+        if predicted_label_index < len(LABELS):
+            predicted_label = LABELS[predicted_label_index]
+            # If damage is detected, draw a bounding box around it
+            if predicted_label != "NoDamage":
+                # Draw a red rectangle around the damaged area
+                cv2.rectangle(image, (0, 0), (image.shape[1], image.shape[0]), (0, 0, 255), 2)
             else:
-                predicted_label = "NoDamage"
+                # Draw a green rectangle around the undamaged area
+                cv2.rectangle(image, (0, 0), (image.shape[1], image.shape[0]), (0, 255, 0), 2)
+            cv2.putText(image, f"Damage: {predicted_label}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    return image
 
-            # Load and process annotations to check for road damage
-            annotation_path = os.path.join(TEST_IMAGE_DIR, img_file.replace(".jpg", ".xml"))
-            has_damage = load_annotation_function(annotation_path)
+# Open file dialog to select an image
+Tk().withdraw()  # Hide the main tkinter window
+image_path = askopenfilename(title="Select an image file", filetypes=[("Image files", ".jpg;.jpeg;*.png")])
 
-            # Append results
-            results.append((img_file, predicted_label, has_damage))
-    return results
+# Preprocess the uploaded image
+image = preprocess_image(image_path)
 
+# Make predictions using the model
+predictions = model.predict(np.expand_dims(image, axis=0))
 
-def save_results(results, output_file):
-    with open(output_file, "w") as f:
-        for img_file, predicted_label, has_damage in results:
-            f.write(f"Image: {img_file}, Predicted Label: {predicted_label}, Has Damage: {has_damage}\n")
+# Draw bounding boxes around detected damage areas
+processed_image = draw_damage_boxes(image.copy(), predictions)
 
-
-# Load trained model
-model = load_model("trained_model.h5")
-
-# Load and predict images
-results = load_and_predict_images(model, TEST_IMAGE_DIR)
-
-# Save results to a text file
-save_results(results, OUTPUT_FILE)
+# Display the processed image
+cv2.imshow('Damage Detection', processed_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
