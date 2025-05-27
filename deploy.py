@@ -1,4 +1,3 @@
-deploy .py
 import cv2
 import numpy as np
 from keras.models import load_model
@@ -22,18 +21,33 @@ def display_alerts(frame, predictions):
 
 cap = cv2.VideoCapture(r'C:\Users\ADMIN\Desktop\NexGenMavericks\WhatsApp Video 2024-03-09 at 9.24.12 PM.mp4')
 
+target_fps = 10
+video_fps = cap.get(cv2.CAP_PROP_FPS)
+frame_skip = int(video_fps // target_fps) if video_fps > target_fps else 1
+
+frame_count = 0
+processed_frames = 0
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
 
-    preprocessed_frame = preprocess_frame(frame)
+    if frame_count % frame_skip == 0:
+        preprocessed_frame = preprocess_frame(frame)
+        predictions = model.predict(preprocessed_frame)[0]
+        frame_with_alerts = display_alerts(frame, predictions)
+        cv2.imshow('Road Damage Detection', frame_with_alerts)
+        processed_frames += 1
+    else:
+        cv2.imshow('Road Damage Detection', frame)
 
-    predictions = model.predict(preprocessed_frame)[0]
+    frame_count += 1
 
-    frame_with_alerts = display_alerts(frame, predictions)
-    cv2.imshow('Road Damage Detection', frame_with_alerts)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
 cap.release()
 cv2.destroyAllWindows()
+
+print(f"Total frames processed by the model at {target_fps} FPS: {processed_frames}")
